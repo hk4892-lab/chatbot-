@@ -1,0 +1,62 @@
+[
+  {
+    "id": "kb_en_1",
+    "title": "Savings Account Minimum Balance",
+    "content": "Maintain the minimum average balance each month to avoid penalties. Digital channels show your MAB progress.",
+    "tags": ["savings", "balance"]
+  },
+  {
+    "id": "kb_en_2",
+    "title": "Debit Card Blocking",
+    "content": "You can block your debit card instantly via mobile banking or call support for emergency blocking.",
+    "tags": ["card", "security"]
+  },
+  {
+    "id": "kb_en_3",
+    "title": "UPI Transaction Limits",
+    "content": "Daily UPI limit is INR 1 lakh with up to 20 transfers; limits may vary by merchant category.",
+    "tags": ["upi", "limit"]
+  },
+  {
+    "id": "kb_en_4",
+    "title": "EMI Formula",
+    "content": "EMI equals P*r*(1+r)^n divided by ((1+r)^n - 1) where r is the monthly interest rate.",
+    "tags": ["emi", "loan"]
+  },
+  {
+    "id": "kb_en_5",
+    "title": "NEFT Timings",
+    "content": "NEFT transfers are available 24x7 with settlement in half-hour batches except during maintenance windows.",
+    "tags": ["payments"]
+  },
+  {
+    "id": "kb_en_6",
+    "title": "KYC Update",
+    "content": "Submit fresh address proof and a passport photo via branch or secure upload to refresh KYC details.",
+    "tags": ["kyc"]
+  },
+  {
+    "id": "kb_en_7",
+    "title": "Fixed Deposit Interest Payout",
+    "content": "Interest on FDs can be paid monthly, quarterly, or on maturity based on the plan selected during booking.",
+    "tags": ["fd", "interest"]
+  },
+  {
+    "id": "kb_en_8",
+    "title": "Credit Card Billing Cycle",
+    "content": "Billing cycle is typically 30 days with payment due 18-20 days after statement generation.",
+    "tags": ["credit card"]
+  },
+  {
+    "id": "kb_en_9",
+    "title": "Account Statement Request",
+    "content": "Download statements from net banking or request an email copy for up to 24 months of history.",
+    "tags": ["statement"]
+  },
+  {
+    "id": "kb_en_10",
+    "title": "Two Factor Authentication",
+    "content": "Online transactions require OTP or biometric authentication to complete securely.",
+    "tags": ["security", "2fa"]
+  }
+]
