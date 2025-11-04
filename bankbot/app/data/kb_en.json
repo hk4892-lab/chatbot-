@@ -1,62 +1,74 @@
 [
   {
-    "id": "kb_en_1",
-    "title": "Savings Account Minimum Balance",
-    "content": "Maintain the minimum average balance each month to avoid penalties. Digital channels show your MAB progress.",
-    "tags": ["savings", "balance"]
+    "q": "How can I check my account balance?",
+    "a": "You can view your current balance instantly from the mobile app dashboard or any ATM mini statement.",
+    "intent": "balance_inquiry",
+    "lang": "en"
   },
   {
-    "id": "kb_en_2",
-    "title": "Debit Card Blocking",
-    "content": "You can block your debit card instantly via mobile banking or call support for emergency blocking.",
-    "tags": ["card", "security"]
+    "q": "What documents do I need to open a savings account?",
+    "a": "Provide a government ID, address proof, and a recent photograph to open a savings account.",
+    "intent": "account_opening",
+    "lang": "en"
   },
   {
-    "id": "kb_en_3",
-    "title": "UPI Transaction Limits",
-    "content": "Daily UPI limit is INR 1 lakh with up to 20 transfers; limits may vary by merchant category.",
-    "tags": ["upi", "limit"]
+    "q": "How do I reset my net banking password?",
+    "a": "Use the 'Forgot Password' option on the login page and verify using your registered mobile number.",
+    "intent": "digital_banking",
+    "lang": "en"
   },
   {
-    "id": "kb_en_4",
-    "title": "EMI Formula",
-    "content": "EMI equals P*r*(1+r)^n divided by ((1+r)^n - 1) where r is the monthly interest rate.",
-    "tags": ["emi", "loan"]
+    "q": "Can I schedule recurring fund transfers?",
+    "a": "Yes, set up a standing instruction in internet banking for recurring transfers on specific dates.",
+    "intent": "fund_transfer",
+    "lang": "en"
   },
   {
-    "id": "kb_en_5",
-    "title": "NEFT Timings",
-    "content": "NEFT transfers are available 24x7 with settlement in half-hour batches except during maintenance windows.",
-    "tags": ["payments"]
+    "q": "What is the daily ATM withdrawal limit?",
+    "a": "Classic debit cards allow withdrawals up to ₹25,000 per day depending on your account tier.",
+    "intent": "card_services",
+    "lang": "en"
   },
   {
-    "id": "kb_en_6",
-    "title": "KYC Update",
-    "content": "Submit fresh address proof and a passport photo via branch or secure upload to refresh KYC details.",
-    "tags": ["kyc"]
+    "q": "How can I dispute an unauthorized transaction?",
+    "a": "Report the transaction via the app's 'Dispute Transaction' feature or call our 24x7 helpline immediately.",
+    "intent": "fraud_support",
+    "lang": "en"
   },
   {
-    "id": "kb_en_7",
-    "title": "Fixed Deposit Interest Payout",
-    "content": "Interest on FDs can be paid monthly, quarterly, or on maturity based on the plan selected during booking.",
-    "tags": ["fd", "interest"]
+    "q": "What are the current fixed deposit interest rates?",
+    "a": "Fixed deposits earn between 6.0% and 6.8% annually based on tenure and deposit amount.",
+    "intent": "interest_rates",
+    "lang": "en"
   },
   {
-    "id": "kb_en_8",
-    "title": "Credit Card Billing Cycle",
-    "content": "Billing cycle is typically 30 days with payment due 18-20 days after statement generation.",
-    "tags": ["credit card"]
+    "q": "How do I update my mobile number?",
+    "a": "Visit the profile section in the mobile app or any branch with a valid ID to update your registered number.",
+    "intent": "profile_update",
+    "lang": "en"
   },
   {
-    "id": "kb_en_9",
-    "title": "Account Statement Request",
-    "content": "Download statements from net banking or request an email copy for up to 24 months of history.",
-    "tags": ["statement"]
+    "q": "How soon are IMPS transfers credited?",
+    "a": "IMPS transfers are processed instantly 24x7, including weekends and holidays.",
+    "intent": "fund_transfer",
+    "lang": "en"
   },
   {
-    "id": "kb_en_10",
-    "title": "Two Factor Authentication",
-    "content": "Online transactions require OTP or biometric authentication to complete securely.",
-    "tags": ["security", "2fa"]
+    "q": "How can I block my lost debit card?",
+    "a": "Block your card from the app's card control section or call the emergency hotline immediately.",
+    "intent": "card_services",
+    "lang": "en"
+  },
+  {
+    "q": "What is the minimum balance for a premium savings account?",
+    "a": "Premium savings accounts require maintaining an average monthly balance of ₹25,000.",
+    "intent": "account_maintenance",
+    "lang": "en"
+  },
+  {
+    "q": "Can I convert my credit card purchases to EMI?",
+    "a": "Yes, eligible transactions above ₹3,000 can be converted to EMI via the card section of the app.",
+    "intent": "card_services",
+    "lang": "en"
   }
 ]
