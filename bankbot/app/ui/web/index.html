@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BankBot Chat</title>
+    <style>
+      body {
+        background-color: #111827;
+        color: #e5e7eb;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      header {
+        padding: 1rem 1.5rem;
+        background: #1f2937;
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      #chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem 1.5rem;
+        overflow-y: auto;
+        gap: 0.75rem;
+      }
+      .message {
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        max-width: 75%;
+        line-height: 1.5;
+      }
+      .user {
+        align-self: flex-end;
+        background: #2563eb;
+        color: #fff;
+      }
+      .bot {
+        align-self: flex-start;
+        background: #374151;
+      }
+      form {
+        display: flex;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        background: #1f2937;
+      }
+      textarea {
+        flex: 1;
+        background: #111827;
+        color: #e5e7eb;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        resize: none;
+        min-height: 3rem;
+      }
+      button {
+        background: #10b981;
+        border: none;
+        color: #111827;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      #error {
+        color: #f87171;
+        padding: 0 1.5rem 1rem;
+        min-height: 1.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>💳 BankBot Assistant</header>
+    <main id="chat-container"></main>
+    <div id="error"></div>
+    <form id="chat-form">
+      <textarea
+        id="input"
+        placeholder="Ask about your banking needs..."
+        autocomplete="off"
+      ></textarea>
+      <button type="submit">Send</button>
+    </form>
+    <script>
+      const form = document.getElementById("chat-form");
+      const input = document.getElementById("input");
+      const chatContainer = document.getElementById("chat-container");
+      const errorBox = document.getElementById("error");
+      const apiUrl = "http://127.0.0.1:8000/chat";
+      const conversation = [];
+
+      function addMessage(role, content) {
+        const div = document.createElement("div");
+        div.className = `message ${role === "user" ? "user" : "bot"}`;
+        div.textContent = content;
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorBox.textContent = "";
+        const text = input.value.trim();
+        if (!text) {
+          return;
+        }
+        addMessage("user", text);
+        conversation.push({ role: "user", content: text });
+        input.value = "";
+        form.querySelector("button").disabled = true;
+        try {
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: conversation }),
+          });
+          if (!response.ok) {
+            throw new Error(`Request failed: ${response.status}`);
+          }
+          const data = await response.json();
+          conversation.push({ role: "assistant", content: data.reply });
+          addMessage("assistant", data.reply);
+        } catch (err) {
+          errorBox.textContent = err.message || "Unable to reach the API";
+        } finally {
+          form.querySelector("button").disabled = false;
+          input.focus();
+        }
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          form.dispatchEvent(new Event("submit"));
+        }
+      });
+    </script>
+  </body>
+</html>

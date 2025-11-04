@@ -1,148 +1,174 @@
-"""FastAPI application exposing chatbot endpoints."""
 from __future__ import annotations
 
-import time
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional
+import logging
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
-from .core.language import (
-    LANG_AUTO,
-    LANG_EN,
-    LANG_HI,
-    LANG_TA,
-    LanguageNormalizer,
+from . import config, rag, slm
+from .language import detect_language
+from .policy import PolicyDecision, decide_action
+from .redaction import safe_for_log
+from .tools import block_card_ticket, emi_calculator, interest_rates
+
+LOGGER = logging.getLogger("bankbot")
+if not LOGGER.handlers:
+    LOGGER.setLevel(logging.INFO)
+    handler = logging.FileHandler(config.LOG_PATH, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    LOGGER.addHandler(handler)
+
+app = FastAPI(title="BankBot API", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-from .core.policy import Policy, PolicyDecision, DEFAULT_THRESHOLD
-from .core.redaction import Redactor, write_audit_log
-from .core.render import format_answer
-from .core.retrieval import KnowledgeBase, Retriever
+
+
+class ChatMessage(BaseModel):
+    role: str = Field(pattern="^(system|user|assistant)$")
+    content: str
 
 
 class ChatRequest(BaseModel):
-    message: str
-    threshold: Optional[float] = None
-    use_sentence_transformers: Optional[bool] = False
-    lang: Optional[str] = None
+    messages: List[ChatMessage]
+    top_k: Optional[int] = None
+    max_new_tokens: int = 256
+    temperature: float = 0.2
 
 
 class ChatResponse(BaseModel):
+    reply: str
     lang: str
-    route: str
-    answer: Optional[str]
-    citations: List[Dict[str, str]]
-    tool_result: Optional[Dict[str, object]]
-    confidence: float
-    clarifying_question: Optional[str] = None
+    source: str
 
 
-@dataclass
-class SessionState:
-    history: List[Dict[str, object]] = field(default_factory=list)
-    redaction_map: Dict[str, str] = field(default_factory=dict)
+@app.on_event("startup")
+async def startup_event() -> None:
+    rag.build_or_load_index()
 
 
-class SessionManager:
-    def __init__(self) -> None:
-        self.state = SessionState()
-
-    def update(self, user_message: str, decision: PolicyDecision, mapping: Dict[str, str]) -> None:
-        self.state.history.append(
-            {
-                "user": user_message,
-                "decision": decision.route,
-            }
-        )
-        self.state.redaction_map.update(mapping)
-
-
-DATA_PATH = Path(__file__).resolve().parent / "data"
-LOG_PATH = Path(__file__).resolve().parent.parent / "logs" / "audit.log"
-
-normalizer = LanguageNormalizer()
-policy = Policy(normalizer)
-redactor = Redactor()
-kb = KnowledgeBase(DATA_PATH)
-session_manager = SessionManager()
-
-app = FastAPI(title="BankBot", version="1.0.0")
-
-
-def _build_retriever(use_sentence_transformers: bool = False) -> Retriever:
-    return Retriever(kb=kb, use_sentence_transformers=use_sentence_transformers)
-
-
-@app.post("/chat/turn", response_model=ChatResponse)
-async def chat_turn(request: ChatRequest) -> ChatResponse:
-    if not request.message:
-        raise HTTPException(status_code=400, detail="message cannot be empty")
-
-    detection = normalizer.detect_language(request.message)
-    lang = request.lang or detection.primary
-    if lang not in {LANG_EN, LANG_HI, LANG_TA}:
-        lang = detection.primary
-
-    redaction_result = redactor.redact(request.message)
-    normalized = normalizer.normalize(redaction_result.text)
-
-    retriever = _build_retriever(use_sentence_transformers=bool(request.use_sentence_transformers))
-    results = retriever.search(normalized)
-
-    threshold = request.threshold if request.threshold is not None else DEFAULT_THRESHOLD
-    decision = policy.decide(
-        message=redaction_result.text,
-        lang=lang,
-        results=results,
-        threshold=threshold,
-        redaction_map=redaction_result.mapping,
-    )
-
-    session_manager.update(request.message, decision, redaction_result.mapping)
-
-    answer = decision.answer
-    if answer:
-        answer = format_answer(answer, decision.citations)
-
-    write_audit_log(
-        LOG_PATH,
-        {
-            "ts": time.time(),
-            "lang": lang,
-            "route": decision.route,
-            "topdoc_id": results[0].document.doc_id if results else None,
-            "top_score": results[0].score if results else 0.0,
-            "redaction_tokens": redaction_result.mapping.keys(),
-            "tools_called": list(decision.tool_result.keys()) if decision.tool_result else [],
-        },
-    )
-
-    return ChatResponse(
-        lang=lang,
-        route=decision.route,
-        answer=answer,
-        citations=decision.citations,
-        tool_result=decision.tool_result,
-        confidence=decision.confidence,
-        clarifying_question=decision.clarifying_question,
-    )
+@app.get("/")
+def root() -> dict[str, object]:
+    return {"ok": True, "msg": "BankBot API up. See /docs"}
 
 
 @app.get("/healthz")
-async def healthz() -> Dict[str, str]:
-    return {"status": "ok"}
-
-
-@app.get("/config")
-async def config() -> Dict[str, object]:
+def healthz() -> dict[str, object]:
+    store = rag.build_or_load_index()
+    rag_ready = store.is_ready()
+    slm_ready = bool(slm.get_pipe()) if config.USE_SLM else False
     return {
-        "languages": [LANG_AUTO, LANG_EN, LANG_HI, LANG_TA],
-        "threshold_default": DEFAULT_THRESHOLD,
-        "sentence_transformers_available": _build_retriever(False).use_sentence_transformers,
-        "history_length": len(session_manager.state.history),
+        "ok": True,
+        "rag_index": rag_ready,
+        "slm": slm_ready,
+        "embed_model": config.EMBED_MODEL,
     }
 
 
-__all__ = ["app"]
+def _latest_user_message(messages: List[ChatMessage]) -> ChatMessage:
+    for message in reversed(messages):
+        if message.role == "user":
+            return message
+    raise HTTPException(status_code=400, detail="A user message is required")
+
+
+def _run_tool(decision: PolicyDecision, lang: str, user_text: str) -> ChatResponse:
+    if decision.tool == "emi":
+        result = emi_calculator(500000.0, 10.5, 60)
+        reply = (
+            "Estimated EMI is ₹{emi} with total payment ₹{total}."
+            " Adjust the loan amount or tenure for other scenarios."
+        ).format(emi=result["emi"], total=result["total_payment"])
+        return ChatResponse(reply=reply, lang=lang, source="tool")
+    if decision.tool == "block_card":
+        ticket = block_card_ticket("Customer", "1234", "lost card")
+        reply = (
+            f"Your card block request is logged with ticket {ticket['ticket_id']} and status"
+            " {ticket['status']}. Our team will reach out shortly."
+        )
+        return ChatResponse(reply=reply, lang=lang, source="tool")
+    if decision.tool == "interest_rates":
+        product = "savings"
+        if "loan" in user_text.lower():
+            product = "home_loan"
+        rate_info = interest_rates(product)
+        reply = (
+            f"Current {rate_info['product']} interest rate is {rate_info['rate_percent']}%."
+            " Contact support for personalised offers."
+        )
+        return ChatResponse(reply=reply, lang=lang, source="tool")
+    return ChatResponse(
+        reply="Could you clarify how I can assist with that?",
+        lang=lang,
+        source="clarify",
+    )
+
+
+def _compose_rag_reply(hits: list[dict]) -> str:
+    if not hits:
+        return ""
+    top = hits[0]
+    reply = top.get("answer") or top.get("text")
+    intent = top.get("intent")
+    if intent:
+        reply = f"{reply} (Intent: {intent})"
+    return reply
+
+
+def _slm_context(hits: list[dict], top_k: int) -> str:
+    snippets = []
+    for hit in hits[:top_k]:
+        intent = hit.get("intent", "")
+        answer = hit.get("answer", "")
+        snippets.append(f"- ({intent}) {answer}")
+    return "Context:\n" + "\n".join(snippets)
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="Messages are required")
+    user_message = _latest_user_message(request.messages)
+    lang = detect_language(user_message.content)
+    redacted = safe_for_log(user_message.content)
+    LOGGER.info("chat_request lang=%s text=%s", lang, redacted)
+
+    top_k = request.top_k or config.TOP_K
+    hits = rag.retrieve(user_message.content, top_k)
+    decision = decide_action(user_message.content, hits, config.USE_SLM, config.RAG_SCORE_THRESHOLD)
+
+    if decision.action == "escalate":
+        return ChatResponse(reply=decision.message or "Please contact support.", lang=lang, source="escalate")
+
+    if decision.action == "tool" and decision.tool:
+        return _run_tool(decision, lang, user_message.content)
+
+    if decision.action == "rag":
+        reply = _compose_rag_reply(hits)
+        if not reply:
+            return ChatResponse(reply="Could you provide more details?", lang=lang, source="clarify")
+        return ChatResponse(reply=reply, lang=lang, source="rag")
+
+    if decision.action == "slm_rag" and config.USE_SLM:
+        context = _slm_context(hits, top_k)
+        system_prompt = f"{config.DEFAULT_SYSTEM_PROMPT}\n{context}"
+        generated = slm.generate(
+            system_prompt,
+            [message.model_dump() for message in request.messages],
+            max_new_tokens=request.max_new_tokens,
+            temperature=request.temperature,
+        )
+        if generated:
+            return ChatResponse(reply=generated, lang=lang, source="slm_rag")
+
+    return ChatResponse(
+        reply="Could you share a bit more detail so I can help effectively?",
+        lang=lang,
+        source="clarify",
+    )

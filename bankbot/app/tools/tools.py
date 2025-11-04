@@ -1,41 +1,44 @@
-"""Mock tool implementations."""
 from __future__ import annotations
 
 import math
-import random
-import string
+import uuid
 from typing import Dict
 
 
-def calculate_emi(P: float, annual_rate_percent: float, months: int) -> float:
-    """Calculate the EMI using the standard formula."""
+def emi_calculator(principal: float, annual_rate: float, months: int) -> Dict[str, float]:
+    monthly_rate = annual_rate / (12 * 100)
     if months <= 0:
-        raise ValueError("months must be positive")
-    monthly_rate = annual_rate_percent / 12 / 100
+        raise ValueError("Months must be positive")
     if monthly_rate == 0:
-        return round(P / months, 2)
-    numerator = P * monthly_rate * math.pow(1 + monthly_rate, months)
-    denominator = math.pow(1 + monthly_rate, months) - 1
-    emi = numerator / denominator
-    return round(emi, 2)
-
-
-def block_card(tokenized_card: str, reason: str) -> str:
-    """Mock card blocking tool returning a ticket ID."""
-    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    return f"CARD-BLOCK-{suffix}"
-
-
-def fetch_rate(product: str) -> Dict[str, object]:
-    """Return mock rate information."""
-    product_key = product.strip().lower()
-    rates = {
-        "savings": {"interest_rate_percent": 3.5},
-        "fixed deposit": {"interest_rate_percent": 6.75},
-        "home loan": {"interest_rate_percent": 8.1},
-        "personal loan": {"interest_rate_percent": 11.9},
+        emi = principal / months
+    else:
+        emi = principal * monthly_rate * math.pow(1 + monthly_rate, months) / (math.pow(1 + monthly_rate, months) - 1)
+    total_payment = emi * months
+    total_interest = total_payment - principal
+    return {
+        "emi": round(float(emi), 2),
+        "total_interest": round(float(total_interest), 2),
+        "total_payment": round(float(total_payment), 2),
     }
-    return rates.get(product_key, {"interest_rate_percent": 0.0, "note": "No data"})
 
 
-__all__ = ["calculate_emi", "block_card", "fetch_rate"]
+def block_card_ticket(name: str, last4: str, reason: str) -> Dict[str, str]:
+    ticket_id = str(uuid.uuid4())[:8]
+    return {
+        "ticket_id": ticket_id,
+        "status": "raised",
+        "message": f"Ticket for {name} ending {last4} due to {reason} is raised.",
+    }
+
+
+INTEREST_TABLE = {
+    "savings": 3.5,
+    "fixed_deposit": 6.2,
+    "home_loan": 8.1,
+}
+
+
+def interest_rates(product: str) -> Dict[str, float | str]:
+    key = product.lower().strip()
+    rate = INTEREST_TABLE.get(key, 4.0)
+    return {"product": key, "rate_percent": rate}
